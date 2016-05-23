@@ -88,13 +88,11 @@ public class WeatherActivity extends Activity {
 
             final View rootView = inflater.inflate(R.layout.fragment_weather, container, false);
             mLocationNameTextView = (TextView) rootView.findViewById(R.id.location_name);
-            mCurrentTemperatureTextView = (TextView) rootView
-                    .findViewById(R.id.current_temperature);
+            mCurrentTemperatureTextView = (TextView) rootView.findViewById(R.id.current_temperature);
 
             // Set up list view for weather forecasts.
             mForecastListView = (ListView) rootView.findViewById(R.id.weather_forecast_list);
-            final WeatherForecastListAdapter adapter = new WeatherForecastListAdapter(
-                    new ArrayList<WeatherForecast>(), getActivity());
+            final WeatherForecastListAdapter adapter = new WeatherForecastListAdapter(new ArrayList<WeatherForecast>(), getActivity());
             mForecastListView.setAdapter(adapter);
 
             mAttributionTextView = (TextView) rootView.findViewById(R.id.attribution);
@@ -196,7 +194,7 @@ public class WeatherActivity extends Activity {
             final LocationService locationService = new LocationService(locationManager);
 
             // Get our current location.
-            final Observable fetchDataObservable = locationService.getLocation()
+            final Observable fetchDataObservable = locationService.getLocation(getActivity())
                     .timeout(LOCATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .flatMap(new Func1<Location, Observable<HashMap<String, WeatherForecast>>>() {
                         @Override
@@ -228,51 +226,48 @@ public class WeatherActivity extends Activity {
                     });
 
             mCompositeSubscription.add(fetchDataObservable
-                            .subscribeOn(Schedulers.newThread())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(new Subscriber<HashMap<String, WeatherForecast>>() {
-                                @Override
-                                public void onNext(final HashMap<String, WeatherForecast> weatherData) {
-                                    // Update UI with current weather.
-                                    final CurrentWeather currentWeather = (CurrentWeather) weatherData
-                                            .get(KEY_CURRENT_WEATHER);
-                                    mLocationNameTextView.setText(currentWeather.getLocationName());
-                                    mCurrentTemperatureTextView.setText(
-                                            TemperatureFormatter.format(currentWeather.getTemperature()));
+                    .subscribeOn(Schedulers.newThread())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Subscriber<HashMap<String, WeatherForecast>>() {
+                        @Override
+                        public void onNext(final HashMap<String, WeatherForecast> weatherData) {
+                            // Update UI with current weather.
+                            final CurrentWeather currentWeather = (CurrentWeather) weatherData
+                                    .get(KEY_CURRENT_WEATHER);
+                            mLocationNameTextView.setText(currentWeather.getLocationName());
+                            mCurrentTemperatureTextView.setText(
+                                    TemperatureFormatter.format(currentWeather.getTemperature()));
 
-                                    // Update weather forecast list.
-                                    final List<WeatherForecast> weatherForecasts = (List<WeatherForecast>)
-                                            weatherData.get(KEY_WEATHER_FORECASTS);
-                                    final WeatherForecastListAdapter adapter = (WeatherForecastListAdapter)
-                                            mForecastListView.getAdapter();
-                                    adapter.clear();
-                                    adapter.addAll(weatherForecasts);
-                                }
+                            // Update weather forecast list.
+                            final List<WeatherForecast> weatherForecasts = (List<WeatherForecast>)
+                                    weatherData.get(KEY_WEATHER_FORECASTS);
+                            final WeatherForecastListAdapter adapter = (WeatherForecastListAdapter)
+                                    mForecastListView.getAdapter();
+                            adapter.clear();
+                            adapter.addAll(weatherForecasts);
+                        }
 
-                                @Override
-                                public void onCompleted() {
-                                    mSwipeRefreshLayout.setRefreshing(false);
-                                    mAttributionTextView.setVisibility(View.VISIBLE);
-                                }
+                        @Override
+                        public void onCompleted() {
+                            mSwipeRefreshLayout.setRefreshing(false);
+                            mAttributionTextView.setVisibility(View.VISIBLE);
+                        }
 
-                                @Override
-                                public void onError(final Throwable error) {
-                                    mSwipeRefreshLayout.setRefreshing(false);
+                        @Override
+                        public void onError(final Throwable error) {
+                            mSwipeRefreshLayout.setRefreshing(false);
 
-                                    if (error instanceof TimeoutException) {
-                                        Crouton.makeText(getActivity(),
-                                                R.string.error_location_unavailable, Style.ALERT).show();
-                                    } else if (error instanceof RetrofitError
-                                            || error instanceof HttpException) {
-                                        Crouton.makeText(getActivity(),
-                                                R.string.error_fetch_weather, Style.ALERT).show();
-                                    } else {
-                                        Log.e(TAG, error.getMessage());
-                                        error.printStackTrace();
-                                        throw new RuntimeException("See inner exception");
-                                    }
-                                }
-                            })
+                            if (error instanceof TimeoutException) {
+                                Crouton.makeText(getActivity(), R.string.error_location_unavailable, Style.ALERT).show();
+                            } else if (error instanceof RetrofitError || error instanceof HttpException) {
+                                Crouton.makeText(getActivity(), R.string.error_fetch_weather, Style.ALERT).show();
+                            } else {
+                                Log.e(TAG, error.getMessage());
+                                error.printStackTrace();
+                                throw new RuntimeException("See inner exception");
+                            }
+                        }
+                    })
             );
         }
     }

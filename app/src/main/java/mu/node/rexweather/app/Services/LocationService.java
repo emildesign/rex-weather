@@ -1,11 +1,15 @@
 package mu.node.rexweather.app.Services;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.v4.app.ActivityCompat;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -21,7 +25,7 @@ public class LocationService {
         mLocationManager = locationManager;
     }
 
-    public Observable<Location> getLocation() {
+    public Observable<Location> getLocation(final Context context) {
         return Observable.create(new Observable.OnSubscribe<Location>() {
             @Override
             public void call(final Subscriber<? super Location> subscriber) {
@@ -47,15 +51,18 @@ public class LocationService {
                 final Criteria locationCriteria = new Criteria();
                 locationCriteria.setAccuracy(Criteria.ACCURACY_COARSE);
                 locationCriteria.setPowerRequirement(Criteria.POWER_LOW);
-                final String locationProvider = mLocationManager
-                        .getBestProvider(locationCriteria, true);
+                final String locationProvider = mLocationManager.getBestProvider(locationCriteria, true);
 
-                Looper.prepare();
+                if (locationProvider != null) {
+                    Looper.prepare();
 
-                mLocationManager.requestSingleUpdate(locationProvider,
-                        locationListener, Looper.myLooper());
+                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    mLocationManager.requestSingleUpdate(locationProvider, locationListener, Looper.myLooper());
 
-                Looper.loop();
+                    Looper.loop();
+                }
             }
         });
     }
